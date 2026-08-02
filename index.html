@@ -1,0 +1,527 @@
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js';
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc
+} from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js';
+
+// Твой конфиг из Firebase Console. Analytics сюда не подключаю —
+// он не нужен для логина/регистрации и данных, а в некоторых
+// песочницах (например превью артефакта) может просто шуметь ошибками в консоль без пользы.
+const firebaseConfig = {
+  apiKey: "AIzaSyBXBhiepie8kjLF_I8xWsP4E-N3yCjWKlI",
+  authDomain: "souz-3f573.firebaseapp.com",
+  projectId: "souz-3f573",
+  storageBucket: "souz-3f573.firebasestorage.app",
+  messagingSenderId: "342414548891",
+  appId: "1:342414548891:web:ee42d7f3f683a945248b3e",
+  measurementId: "G-CSQV0PH5M8"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+var WALLET_ADDRESS = 'TYVoBxH3rM6m7uc1KaYwG8S328JDcyDfsV';
+var currentUser = null;
+
+  // ============================================================
+  // Firestore helpers — данные лежат в users/{uid}/data/{key},
+  // доступны только владельцу (см. правила безопасности ниже).
+  // ============================================================
+  async function storeGet(key, fallback){
+    try{
+      if(!currentUser) return fallback;
+      var ref = doc(db, 'users', currentUser.uid, 'data', key);
+      var snap = await getDoc(ref);
+      if(!snap.exists() || snap.data().value === undefined) return fallback;
+      return snap.data().value;
+    }catch(e){
+      console.error('firestore get failed:', key, e);
+      return fallback;
+    }
+  }
+  async function storeSet(key, value){
+    try{
+      if(!currentUser) return false;
+      var ref = doc(db, 'users', currentUser.uid, 'data', key);
+      await setDoc(ref, { value: value, updatedAt: Date.now() });
+      return true;
+    }catch(e){
+      console.error('firestore set failed:', key, e);
+      return false;
+    }
+  }
+  function uid(){ return Math.random().toString(36).slice(2,7); }
+
+  // ============================================================
+  // theme (на логин-экране не сохраняется — сохранять некуда,
+  // пока нет пользователя; после входа подтягивается/пишется в Firestore)
+  // ============================================================
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  }
+  async function toggleTheme(){
+    var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = cur === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    if(currentUser) await storeSet('theme', next);
+  }
+  document.querySelectorAll('.theme-toggle-btn').forEach(function(b){
+    b.addEventListener('click', toggleTheme);
+  });
+
+  // ============================================================
+  // login / register / logout — реальный Firebase Auth
+  // ============================================================
+  var bootLoading = document.getElementById('boot-loading');
+  var loginScreen = document.getElementById('login-screen');
+  var app = document.getElementById('app');
+  var form = document.getElementById('login-form');
+  var userInput = document.getElementById('login-user');
+  var passInput = document.getElementById('login-pass');
+  var errorEl = document.getElementById('login-error');
+  var card = document.querySelector('.login-card');
+  var submitBtn = document.getElementById('login-submit');
+  var authTitle = document.getElementById('auth-title');
+  var authSub = document.getElementById('auth-sub');
+  var authSwitchText = document.getElementById('auth-switch-text');
+  var authSwitchBtn = document.getElementById('auth-switch-btn');
+  var authMode = 'login';
+
+  function setAuthMode(mode){
+    authMode = mode;
+    errorEl.style.display = 'none';
+    if(mode === 'register'){
+      authTitle.textContent = 'Регистрация';
+      authSub.textContent = 'Создайте аккаунт, чтобы продолжить';
+      submitBtn.textContent = 'Зарегистрироваться';
+      authSwitchText.textContent = 'Уже есть аккаунт?';
+      authSwitchBtn.textContent = 'Войти';
+      passInput.setAttribute('autocomplete', 'new-password');
+    } else {
+      authTitle.textContent = 'Войти';
+      authSub.textContent = 'Пожалуйста, войдите в аккаунт, чтобы продолжить';
+      submitBtn.textContent = 'Войти';
+      authSwitchText.textContent = 'Нет аккаунта?';
+      authSwitchBtn.textContent = 'Зарегистрироваться';
+      passInput.setAttribute('autocomplete', 'current-password');
+    }
+  }
+  authSwitchBtn.addEventListener('click', function(){
+    setAuthMode(authMode === 'login' ? 'register' : 'login');
+  });
+
+  var FIREBASE_ERROR_MESSAGES = {
+    'auth/email-already-in-use': 'Этот email уже зарегистрирован',
+    'auth/invalid-email': 'Некорректный email',
+    'auth/weak-password': 'Пароль слишком простой — минимум 6 символов',
+    'auth/user-not-found': 'Пользователь с таким email не найден',
+    'auth/wrong-password': 'Неверный пароль',
+    'auth/invalid-credential': 'Неверный email или пароль',
+    'auth/too-many-requests': 'Слишком много попыток. Попробуй чуть позже',
+    'auth/network-request-failed': 'Нет связи с сервером — проверь интернет'
+  };
+  function shakeCard(){
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  }
+
+  function showApp(){
+    loginScreen.style.display = 'none';
+    app.style.display = 'flex';
+    initAppData();
+  }
+  function showLogin(){
+    app.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    passInput.value = '';
+    errorEl.style.display = 'none';
+    setActivePage('home');
+    dataLoaded = false;
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var email = userInput.value.trim();
+    var pass = passInput.value;
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    try{
+      if(authMode === 'register'){
+        await createUserWithEmailAndPassword(auth, email, pass);
+      } else {
+        await signInWithEmailAndPassword(auth, email, pass);
+      }
+      // дальше onAuthStateChanged сам покажет приложение
+    }catch(err){
+      errorEl.textContent = FIREBASE_ERROR_MESSAGES[err.code] || ('Ошибка: ' + err.code);
+      errorEl.style.display = 'block';
+      shakeCard();
+    }finally{
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', function(){
+    signOut(auth);
+  });
+
+  onAuthStateChanged(auth, function(user){
+    bootLoading.style.display = 'none';
+    currentUser = user || null;
+    if(user){ showApp(); } else { showLogin(); }
+  });
+
+  // ============================================================
+  // sidebar navigation
+  // ============================================================
+  var navItems = document.querySelectorAll('.nav-item');
+  function setActivePage(pageId){
+    navItems.forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.page === pageId);
+    });
+    document.querySelectorAll('.page').forEach(function(pg){
+      pg.classList.toggle('active', pg.id === 'page-' + pageId);
+    });
+  }
+  navItems.forEach(function(btn){
+    btn.addEventListener('click', function(){ setActivePage(btn.dataset.page); });
+  });
+
+  // ============================================================
+  // generic toggles (Пр / Вы / настройки / статус в форме)
+  // ============================================================
+  function bindToggle(t){
+    t.addEventListener('click', function(){ t.classList.toggle('on'); });
+  }
+  document.querySelectorAll('[data-toggle]').forEach(bindToggle);
+
+  // ============================================================
+  // copy wallet address
+  // ============================================================
+  var copyBtn = document.getElementById('copy-addr');
+  if(copyBtn){
+    copyBtn.addEventListener('click', function(){
+      var tip = document.getElementById('copied-tip');
+      function flash(){ tip.classList.add('show'); setTimeout(function(){ tip.classList.remove('show'); }, 1200); }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(WALLET_ADDRESS).then(flash).catch(flash);
+      } else { flash(); }
+    });
+  }
+
+  // ============================================================
+  // generic modal open/close
+  // ============================================================
+  function openModal(id){
+    document.getElementById(id).classList.add('open');
+    document.body.classList.add('modal-open');
+  }
+  function closeModal(id){
+    document.getElementById(id).classList.remove('open');
+    if(!document.querySelector('.modal-overlay.open')) document.body.classList.remove('modal-open');
+  }
+  document.querySelectorAll('[data-close]').forEach(function(btn){
+    btn.addEventListener('click', function(){ closeModal(btn.dataset.close); });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(function(ov){
+    ov.addEventListener('click', function(e){ if(e.target === ov) closeModal(ov.id); });
+  });
+
+  // confirm-delete dialog (reusable)
+  var confirmResolve = null;
+  function askConfirm(){
+    openModal('confirm-modal-overlay');
+    return new Promise(function(resolve){ confirmResolve = resolve; });
+  }
+  document.getElementById('confirm-ok-btn').addEventListener('click', function(){
+    closeModal('confirm-modal-overlay');
+    if(confirmResolve) confirmResolve(true);
+    confirmResolve = null;
+  });
+  document.getElementById('confirm-cancel-btn').addEventListener('click', function(){
+    closeModal('confirm-modal-overlay');
+    if(confirmResolve) confirmResolve(false);
+    confirmResolve = null;
+  });
+
+  // ============================================================
+  // app data: requisites + devices (loaded per account on login)
+  // ============================================================
+  var requisites = [];
+  var devices = [];
+  var editingReqId = null;
+  var dataLoaded = false;
+
+  var AVATAR_COLORS = ['#b23bc9','#e0b93a','#3ba0c9','#4caf6d','#e0703a','#8a6de0'];
+  function colorForId(id){
+    var sum = 0;
+    for(var i=0;i<id.length;i++) sum += id.charCodeAt(i);
+    return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+  }
+  // сайт использует пробел как разделитель тысяч и ТОЧКУ как десятичный разделитель
+  // (проверено по оригинальным скринам: "18 500.00", "0.00/60 000.00") — поэтому
+  // считаем вручную, а не через toLocaleString('ru-RU'), у которого запятая.
+  function groupThousands(intStr){
+    return intStr.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+  function fmtMoney(n){
+    n = Number(n)||0;
+    var fixed = n.toFixed(2);
+    var parts = fixed.split('.');
+    return groupThousands(parts[0]) + '.' + parts[1];
+  }
+  function fmtInt(n){
+    n = Math.round(Number(n)||0);
+    return groupThousands(String(n));
+  }
+
+  function seedRequisites(){
+    return [
+      {id:uid(), name:'Сбербанк перевод', currency:'RUB', method:'Перевод', type:'', group:'', deviceId:'',
+        txMin:1000, txMax:30000, volDay:60000, volTotal:1000000, cntDay:2, cntTotal:100, concurrent:1, status:false},
+      {id:uid(), name:'СБП пополнение', currency:'RUB', method:'СБП', type:'', group:'', deviceId:'',
+        txMin:500, txMax:15000, volDay:57900, volTotal:1000000, cntDay:10000, cntTotal:10000, concurrent:1, status:false}
+    ];
+  }
+
+  var chatIcon = '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.4 8.5 8.5 0 0 1-4-1L3 20l1.1-4.5A8.4 8.4 0 1 1 21 11.5z"></path></svg>';
+  var editIcon = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+  var boxCrossIcon = '<svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M9 9l6 6M15 9l-6 6"></path></svg>';
+  var phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>';
+
+  function deviceName(id){
+    var d = devices.find(function(x){ return x.id === id; });
+    return d ? d.name : '';
+  }
+
+  function renderRequisites(){
+    var tbody = document.getElementById('req-tbody');
+    if(!requisites.length){
+      tbody.innerHTML = '<tr class="table-empty-row"><td colspan="10">Реквизиты не найдены</td></tr>';
+      return;
+    }
+    tbody.innerHTML = requisites.map(function(r){
+      var initials = (r.name||'?').trim().slice(0,1).toUpperCase();
+      var devLabel = r.deviceId ? deviceName(r.deviceId) : '—';
+      var l2parts = [r.currency, r.method].filter(Boolean).join(' · ');
+      return '<tr data-id="'+r.id+'">'
+        + '<td><div class="avatar" style="background:'+colorForId(r.id)+'">'+initials+'</div></td>'
+        + '<td class="req-lines"><div class="l1">'+esc(r.name)+'</div><div class="l2">'+esc(l2parts||'—')+'</div></td>'
+        + '<td><div class="device-cell">'+(r.deviceId?phoneIcon:'')+'<span>'+esc(devLabel)+'</span></div></td>'
+        + '<td>'+(r.group ? esc(r.group) : '<span class="muted-dash">—</span>')+'</td>'
+        + '<td class="limit-lines"><div>т '+fmtMoney(r.txMin)+' '+esc(r.currency||'')+'</div><div>о '+fmtMoney(r.txMax)+' '+esc(r.currency||'')+'</div></td>'
+        + '<td class="stat-lines"><div class="stat-pill">0.00/'+fmtMoney(r.volDay)+'</div><div class="stat-pill">0.00/'+fmtMoney(r.volTotal)+'</div></td>'
+        + '<td class="stat-lines"><div class="stat-pill">0/'+fmtInt(r.cntDay)+'</div><div class="stat-pill">0/'+fmtInt(r.cntTotal)+'</div></td>'
+        + '<td>'+(r.concurrent ? r.concurrent : '<span class="muted-dash">—</span>')+'</td>'
+        + '<td><div class="toggle'+(r.status?' on':'')+'" data-row-toggle data-id="'+r.id+'"><span></span></div></td>'
+        + '<td><div class="row-actions">'
+          + '<button title="Чат" type="button">'+chatIcon+'</button>'
+          + '<button title="Изменить" type="button" data-edit="'+r.id+'">'+editIcon+'</button>'
+          + '<button title="Удалить" type="button" class="danger" data-delete="'+r.id+'">'+boxCrossIcon+'</button>'
+          + '</div></td>'
+        + '</tr>';
+    }).join('');
+
+    tbody.querySelectorAll('[data-row-toggle]').forEach(function(t){
+      t.addEventListener('click', async function(){
+        t.classList.toggle('on');
+        var id = t.dataset.id;
+        var rec = requisites.find(function(x){ return x.id === id; });
+        if(rec){ rec.status = t.classList.contains('on'); await storeSet('requisites', requisites); }
+      });
+    });
+    tbody.querySelectorAll('[data-edit]').forEach(function(b){
+      b.addEventListener('click', function(){ openReqModal(b.dataset.edit); });
+    });
+    tbody.querySelectorAll('[data-delete]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var ok = await askConfirm();
+        if(!ok) return;
+        requisites = requisites.filter(function(x){ return x.id !== b.dataset.delete; });
+        await storeSet('requisites', requisites);
+        renderRequisites();
+      });
+    });
+  }
+
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  // ---------- create / edit requisite modal ----------
+  var reqForm = document.getElementById('req-form');
+  var reqModalTitle = document.getElementById('req-modal-title');
+  var fDevice = document.getElementById('f-device');
+
+  function fillDeviceOptions(selectedId){
+    fDevice.innerHTML = '<option value="">— без устройства —</option>' +
+      devices.map(function(d){ return '<option value="'+d.id+'">'+esc(d.name)+'</option>'; }).join('');
+    fDevice.value = selectedId || '';
+  }
+
+  function openReqModal(id){
+    editingReqId = id || null;
+    var r = id ? requisites.find(function(x){ return x.id === id; }) : null;
+    reqModalTitle.textContent = r ? 'Редактировать реквизит' : 'Создать реквизит';
+    document.getElementById('f-name').value = r ? r.name : '';
+    document.getElementById('f-currency').value = r ? r.currency : 'RUB';
+    document.getElementById('f-method').value = r ? r.method : '';
+    document.getElementById('f-type').value = r ? r.type : '';
+    document.getElementById('f-group').value = r ? r.group : '';
+    fillDeviceOptions(r ? r.deviceId : '');
+    document.getElementById('f-tx-min').value = r ? r.txMin : '';
+    document.getElementById('f-tx-max').value = r ? r.txMax : '';
+    document.getElementById('f-vol-day').value = r ? r.volDay : '';
+    document.getElementById('f-vol-total').value = r ? r.volTotal : '';
+    document.getElementById('f-cnt-day').value = r ? r.cntDay : '';
+    document.getElementById('f-cnt-total').value = r ? r.cntTotal : '';
+    document.getElementById('f-concurrent').value = r ? r.concurrent : '';
+    var statusToggle = document.getElementById('f-status');
+    statusToggle.classList.toggle('on', r ? !!r.status : false);
+    openModal('req-modal-overlay');
+  }
+  document.getElementById('open-create-req-btn').addEventListener('click', function(){ openReqModal(null); });
+
+  reqForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    if(!name) return;
+    var data = {
+      name: name,
+      currency: document.getElementById('f-currency').value.trim(),
+      method: document.getElementById('f-method').value.trim(),
+      type: document.getElementById('f-type').value.trim(),
+      group: document.getElementById('f-group').value.trim(),
+      deviceId: fDevice.value,
+      txMin: Number(document.getElementById('f-tx-min').value)||0,
+      txMax: Number(document.getElementById('f-tx-max').value)||0,
+      volDay: Number(document.getElementById('f-vol-day').value)||0,
+      volTotal: Number(document.getElementById('f-vol-total').value)||0,
+      cntDay: Number(document.getElementById('f-cnt-day').value)||0,
+      cntTotal: Number(document.getElementById('f-cnt-total').value)||0,
+      concurrent: Number(document.getElementById('f-concurrent').value)||0,
+      status: document.getElementById('f-status').classList.contains('on')
+    };
+    if(editingReqId){
+      var idx = requisites.findIndex(function(x){ return x.id === editingReqId; });
+      if(idx > -1) requisites[idx] = Object.assign({id:editingReqId}, data);
+    } else {
+      data.id = uid();
+      requisites.push(data);
+    }
+    await storeSet('requisites', requisites);
+    renderRequisites();
+    closeModal('req-modal-overlay');
+  });
+
+  // ============================================================
+  // devices (УСТ) panel
+  // ============================================================
+  function renderDevices(){
+    var list = document.getElementById('devices-list');
+    if(!devices.length){
+      list.innerHTML = '<div class="devices-empty">Устройства не найдены</div>';
+      return;
+    }
+    list.innerHTML = devices.map(function(d){
+      return '<div class="device-row" data-id="'+d.id+'">'
+        + '<div><div class="device-id">ID: '+esc(d.id)+'</div><div class="device-name">'+esc(d.name)+'</div></div>'
+        + '<div class="row-actions">'
+          + '<button title="Изменить" type="button" data-device-edit="'+d.id+'">'+editIcon+'</button>'
+          + '<button title="Удалить" type="button" class="danger" data-device-delete="'+d.id+'">'+boxCrossIcon+'</button>'
+        + '</div></div>';
+    }).join('');
+
+    list.querySelectorAll('[data-device-edit]').forEach(function(b){
+      b.addEventListener('click', function(){ startDeviceInlineEdit(b.dataset.deviceEdit); });
+    });
+    list.querySelectorAll('[data-device-delete]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var ok = await askConfirm();
+        if(!ok) return;
+        devices = devices.filter(function(x){ return x.id !== b.dataset.deviceDelete; });
+        await storeSet('devices', devices);
+        renderDevices();
+      });
+    });
+  }
+
+  function startDeviceInlineEdit(id){
+    var row = document.querySelector('.device-row[data-id="'+id+'"]');
+    var d = devices.find(function(x){ return x.id === id; });
+    if(!row || !d) return;
+    row.innerHTML = '<input class="device-edit-input" type="text" value="'+esc(d.name)+'">'
+      + '<button class="check-btn" title="Сохранить"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;"><path d="M20 6L9 17l-5-5"></path></svg></button>';
+    var input = row.querySelector('input');
+    input.focus();
+    input.select();
+    var save = async function(){
+      var val = input.value.trim();
+      if(val){ d.name = val; await storeSet('devices', devices); }
+      renderDevices();
+    };
+    row.querySelector('.check-btn').addEventListener('click', save);
+    input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); save(); } });
+  }
+
+  var deviceAddRow = document.getElementById('device-add-row');
+  var deviceAddBtn = document.getElementById('device-add-btn');
+  var deviceNewName = document.getElementById('device-new-name');
+  deviceAddBtn.addEventListener('click', function(){
+    deviceAddRow.style.display = 'flex';
+    deviceAddBtn.style.display = 'none';
+    deviceNewName.value = '';
+    deviceNewName.focus();
+  });
+  async function confirmAddDevice(){
+    var name = deviceNewName.value.trim();
+    if(!name) return;
+    devices.push({id: uid(), name: name});
+    await storeSet('devices', devices);
+    deviceAddRow.style.display = 'none';
+    deviceAddBtn.style.display = 'inline-flex';
+    renderDevices();
+  }
+  document.getElementById('device-add-confirm').addEventListener('click', confirmAddDevice);
+  deviceNewName.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); confirmAddDevice(); } });
+
+  document.getElementById('open-devices-btn').addEventListener('click', function(){
+    deviceAddRow.style.display = 'none';
+    deviceAddBtn.style.display = 'inline-flex';
+    renderDevices();
+    openModal('devices-modal-overlay');
+  });
+
+  // ============================================================
+  // load data for the current account (once, after every login)
+  // ============================================================
+  async function initAppData(){
+    if(dataLoaded) return;
+    dataLoaded = true;
+
+    var holder = document.getElementById('storage-note-holder');
+    if(holder) holder.remove();
+
+    var savedTheme = await storeGet('theme', null);
+    if(savedTheme) applyTheme(savedTheme);
+
+    devices = await storeGet('devices', []);
+    var loadedReq = await storeGet('requisites', null);
+    if(loadedReq === null){
+      requisites = seedRequisites();
+      await storeSet('requisites', requisites);
+    } else {
+      requisites = loadedReq;
+    }
+    renderDevices();
+    renderRequisites();
+  }
+</script>
