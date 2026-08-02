@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0d0d;
+    --panel:#1c1c1c;
+    --panel-2:#232323;
+    --input:#2b2b2b;
+    --input-light:#333333;
+    --border:rgba(255,255,255,.06);
+    --border-strong:rgba(255,255,255,.12);
+    --text:#f0f0f0;
+    --muted:#8a8a8e;
+    --muted-2:#6f6f73;
+    --blue:#47a0f4;
+    --blue-dim:rgba(71,160,244,.15);
+    --coral:#e8615a;
+    --green:#26a17b;
+    --red:#e8352d;
+    --on:#2fbf6a;
+    --danger-btn:#d64540;
+    --radius-lg:18px;
+    --radius-md:12px;
+    --radius-sm:8px;
+  }
+  [data-theme="light"]{
+    --bg:#ffffff;
+    --panel:#f4f4f6;
+    --panel-2:#e9e9ec;
+    --input:#ececef;
+    --input-light:#e2e2e6;
+    --border:rgba(0,0,0,.08);
+    --border-strong:rgba(0,0,0,.16);
+    --text:#1a1a1c;
+    --muted:#68686d;
+    --muted-2:#98989d;
+    --blue:#2f7fdb;
+    --blue-dim:rgba(47,127,219,.12);
+    --coral:#d9483f;
+    --green:#1f8f68;
+    --red:#d63c33;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background-color .2s,color .2s;
+  }
+  button, input, select{font-family:inherit;}
+  button{cursor:pointer;}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+  ::placeholder{color:var(--muted-2);}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+  .themed{transition:background-color .2s,color .2s,border-color .2s;}
+
+  /* ---------- shared bits ---------- */
+  .logo-badge{
+    width:44px;height:44px;border-radius:50%;
+    background:#000;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .logo-badge span{
+    font-weight:800;font-size:16px;letter-spacing:-.5px;
+    background:linear-gradient(90deg,#e8467c,#ff8a3d);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .icon-btn{
+    width:42px;height:42px;border-radius:11px;
+    background:var(--input);border:none;color:var(--text);
+    display:flex;align-items:center;justify-content:center;
+    transition:background .15s;
+  }
+  .icon-btn:hover{background:var(--input-light);}
+  .pill-btn{
+    height:42px;padding:0 18px;border-radius:11px;
+    background:var(--input);border:none;color:var(--text);
+    font-weight:600;font-size:14px;
+    display:flex;align-items:center;gap:8px;
+    transition:background .15s;
+  }
+  .pill-btn:hover{background:var(--input-light);}
+  svg.ic{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+  .btn{
+    height:44px;padding:0 20px;border-radius:10px;border:none;
+    font-weight:600;font-size:14px;color:var(--text);
+    display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    background:var(--input-light);transition:filter .15s,background .15s;
+  }
+  .btn:hover{filter:brightness(1.15);}
+  .btn-ghost{background:transparent;border:1px solid var(--border-strong);color:var(--muted);}
+  .btn-ghost:hover{filter:none;border-color:var(--border-strong);color:var(--text);}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-danger{background:var(--danger-btn);color:#fff;}
+  .btn-danger:hover{filter:brightness(1.1);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+
+  .toggle{
+    width:40px;height:22px;border-radius:20px;background:var(--input-light);
+    border:1px solid var(--border-strong);position:relative;flex-shrink:0;
+    transition:background .25s,border-color .25s;
+  }
+  .toggle span{
+    position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+    background:#fff;transition:transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .toggle.on{background:var(--on);border-color:var(--on);}
+  .toggle.on span{transform:translateX(18px);}
+
+  .field-wrap{position:relative;}
+  .field{
+    width:100%;height:46px;background:var(--input);border:1px solid var(--border);
+    border-radius:10px;padding:0 14px;color:var(--text);font-size:14px;appearance:none;
+  }
+  select.field{padding-right:36px;cursor:pointer;}
+  .field-wrap .chev{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+  textarea.field{height:auto;padding:12px 14px;resize:vertical;min-height:70px;}
+
+  .card{background:var(--panel);border-radius:var(--radius-lg);padding:26px 28px;}
+  .empty-panel{background:var(--panel);border-radius:14px;padding:26px;text-align:center;color:var(--muted);font-size:14.5px;}
+  .section-title{font-weight:700;font-size:16.5px;margin:0 0 14px;}
+  .section-title.danger{color:var(--coral);}
+  .section-title.plain{color:var(--text);font-weight:600;}
+
+  /* ---------- login screen ---------- */
+  #login-screen{
+    display:none;min-height:100vh;flex-direction:column;
+  }
+  #boot-loading{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--muted);font-size:14.5px;
+  }
+  .login-card.shake .input-group input{border-color:var(--coral);}
+  .login-header{
+    height:76px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;background:var(--panel);border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .login-header .right{display:flex;gap:12px;}
+  .login-body{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 16px;}
+  .login-card{
+    width:460px;max-width:100%;background:var(--panel);border-radius:22px;
+    padding:44px 40px 40px;box-shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  .login-card h1{font-size:29px;font-weight:800;text-align:center;margin:0 0 12px;}
+  .login-card .sub{color:var(--muted);text-align:center;font-size:14.5px;margin:0 0 30px;line-height:1.5;}
+  .input-group{position:relative;margin-bottom:16px;}
+  .input-group svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);}
+  .input-group input{
+    width:100%;height:52px;background:var(--input-light);border:1px solid var(--border);
+    border-radius:12px;padding:0 16px 0 46px;color:var(--text);font-size:15px;
+  }
+  .input-group input:focus{border-color:var(--blue);}
+  #login-submit{
+    width:100%;height:52px;background:var(--blue);color:#fff;border:none;border-radius:12px;
+    font-weight:700;font-size:15.5px;margin-top:10px;transition:filter .15s;
+  }
+  #login-submit:hover{filter:brightness(1.08);}
+  #login-error{
+    color:var(--coral);font-size:13.5px;text-align:center;margin-top:16px;
+    display:none;
+  }
+  .login-card.shake{animation:shake .4s;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-5px);}
+    40%,60%{transform:translateX(5px);}
+  }
+
+  /* ---------- app shell ---------- */
+  #app{display:none;min-height:100vh;flex-direction:column;}
+  .topbar{
+    height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:0 32px;background:var(--panel);border-bottom:1px solid var(--border);
+  }
+  .topbar .right{display:flex;align-items:center;gap:26px;}
+  .toggle-group{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14.5px;}
+  .logout-btn{display:flex;align-items:center;gap:8px;color:var(--muted);background:none;border:none;font-size:14.5px;transition:color .15s;}
+  .logout-btn:hover{color:var(--text);}
+
+  .app-body{flex:1;display:flex;min-height:0;}
+  .sidebar{
+    width:264px;flex-shrink:0;padding:22px 16px;display:flex;flex-direction:column;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;
+    color:var(--muted);font-size:15px;font-weight:500;margin-bottom:4px;
+    background:none;border:none;width:100%;text-align:left;transition:background .15s,color .15s;
+  }
+  .nav-item:hover{background:rgba(128,128,128,.08);color:var(--text);}
+  .nav-item .ic-wrap{
+    width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .nav-item.active{background:var(--panel-2);color:var(--text);font-weight:600;}
+  .nav-item.active .ic-wrap{color:var(--blue);}
+
+  .bot-card{background:var(--panel);border-radius:14px;padding:16px;margin-top:22px;}
+  .bot-card .label{color:var(--muted);font-size:13px;margin-bottom:12px;}
+  .bot-connect{display:flex;align-items:center;gap:10px;background:none;border:none;color:var(--text);font-weight:600;font-size:14.5px;width:100%;}
+  .bot-connect .tg{
+    width:34px;height:34px;border-radius:50%;background:#2aabee;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .bot-connect .tg svg{width:17px;height:17px;fill:#fff;stroke:none;}
+
+  .content{flex:1;overflow-y:auto;padding:30px 34px 60px;}
+  .content-inner{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:22px;}
+  .page{display:none;flex-direction:column;gap:22px;}
+  .page.active{display:flex;}
+
+  /* ---------- Главная ---------- */
+  .balance-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;}
+  .balance-left{display:flex;gap:18px;align-items:center;}
+  .coin-icon-wrap{position:relative;width:58px;height:58px;flex-shrink:0;}
+  .coin-icon{
+    width:58px;height:58px;border-radius:50%;background:var(--green);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:25px;
+  }
+  .coin-badge{
+    position:absolute;right:-4px;bottom:-4px;width:22px;height:22px;border-radius:50%;
+    background:var(--red);border:3px solid var(--panel);display:flex;align-items:center;justify-content:center;
+  }
+  .coin-badge svg{width:10px;height:10px;stroke:#fff;}
+  .balance-amount{font-size:27px;font-weight:800;margin-bottom:6px;}
+  .balance-address{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14.5px;}
+  .balance-address button{background:none;border:none;color:var(--muted);display:flex;align-items:center;position:relative;}
+  .balance-address button:hover{color:var(--text);}
+  .copied-tip{
+    position:absolute;top:-28px;left:50%;transform:translateX(-50%);
+    background:#000;color:#fff;font-size:11.5px;padding:4px 8px;border-radius:6px;
+    opacity:0;pointer-events:none;transition:opacity .15s;white-space:nowrap;
+  }
+  .copied-tip.show{opacity:1;}
+  .balance-buttons{display:flex;gap:12px;}
+
+  .divider{height:1px;background:var(--border);margin:22px 0;}
+
+  .limits-row{display:flex;gap:44px;flex-wrap:wrap;}
+  .limit-item{display:flex;gap:12px;align-items:center;}
+  .limit-icon{
+    width:38px;height:38px;border-radius:50%;background:var(--blue-dim);color:var(--blue);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .limit-icon svg{width:18px;height:18px;}
+  .limit-label{color:var(--muted);font-size:13px;margin-bottom:3px;}
+  .limit-value{font-weight:700;font-size:15px;}
+
+  .reward-label{color:var(--muted);font-size:14px;margin-bottom:14px;}
+  .reward-row{display:flex;align-items:center;gap:16px;margin-bottom:12px;}
+  .reward-row:last-child{margin-bottom:0;}
+  .reward-row .rl{width:76px;flex-shrink:0;color:var(--muted);font-size:14px;}
+  .pill-grid{display:flex;gap:12px;flex:1;flex-wrap:wrap;}
+  .pill{
+    background:var(--input);border-radius:10px;padding:11px 16px;font-size:13.5px;font-weight:600;
+    text-align:center;flex:1;min-width:110px;white-space:nowrap;
+  }
+  .pill.solo{flex:none;min-width:70px;}
+
+  .ranges-head,.range-row{
+    display:grid;grid-template-columns:130px 90px 1fr 1fr;align-items:center;gap:18px;
+  }
+  .ranges-head{color:var(--muted);font-size:13.5px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+  .range-row{padding:11px 0;font-size:14.5px;}
+  .bar{height:8px;border-radius:4px;}
+  .bar-green-full{background:linear-gradient(90deg,#2e7d46,#4caf6d);width:70%;}
+  .bar-red-full{background:linear-gradient(90deg,#7a1f1f,#e04b4b);width:94%;}
+  .dot{width:8px;height:8px;border-radius:50%;}
+  .dot-green{background:#4caf6d;}
+  .dot-red{background:#e04b4b;}
+
+  /* ---------- filters (Статистика / Ре) ---------- */
+  .filter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .filter-grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .filter-actions{display:flex;gap:12px;margin-top:16px;}
+  .toolbar-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .toolbar-left{display:flex;gap:12px;flex-wrap:wrap;}
+  .page-size-row{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14.5px;}
+  .page-size-row select{width:80px;height:40px;}
+  .empty-stack .simple-heading{color:var(--muted);font-size:19px;font-weight:600;margin:0;}
+
+  /* ---------- table (Ре) ---------- */
+  .table-wrap{overflow-x:auto;}
+  .req-table{width:100%;border-collapse:collapse;min-width:1180px;}
+  .req-table th{
+    text-align:left;color:var(--muted);font-size:13px;font-weight:500;padding:0 10px 14px;
+    border-bottom:1px solid var(--border);white-space:nowrap;
+  }
+  .req-table td{padding:16px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .req-table tr:last-child td{border-bottom:none;}
+  .avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;}
+  .req-cell-flex{display:flex;align-items:center;gap:12px;}
+  .req-lines .l1{font-weight:600;font-size:14px;}
+  .req-lines .l2{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  .device-cell{display:flex;align-items:center;gap:6px;color:var(--text);font-size:13.5px;}
+  .device-cell svg{width:15px;height:22px;color:#3ecf6e;}
+  .limit-lines div{font-size:13px;white-space:nowrap;}
+  .limit-lines div:first-child{margin-bottom:4px;}
+  .stat-pill{
+    background:var(--input);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--muted);
+    display:inline-block;white-space:nowrap;
+  }
+  .stat-lines div{margin-bottom:6px;}
+  .stat-lines div:last-child{margin-bottom:0;}
+  .muted-dash{color:var(--muted-2);}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions button{
+    width:34px;height:34px;border-radius:9px;background:var(--input);border:none;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;
+  }
+  .row-actions button:hover{background:var(--input-light);color:var(--text);}
+  .row-actions button.danger:hover{color:var(--coral);}
+  .row-actions svg{width:16px;height:16px;}
+  .table-empty-row td{text-align:center;color:var(--muted);padding:34px 10px;}
+
+  /* ---------- modals ---------- */
+  body.modal-open{overflow:hidden;}
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.6);
+    display:none;align-items:flex-start;justify-content:center;
+    z-index:1000;padding:5vh 20px;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--panel);border-radius:18px;
+    width:600px;max-width:100%;
+    padding:28px 30px 30px;
+    box-shadow:0 30px 70px rgba(0,0,0,.5);
+  }
+  .modal-box.narrow{width:420px;}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+  .modal-header h2{font-size:19px;font-weight:700;margin:0;}
+  .modal-close{width:36px;height:36px;border-radius:10px;background:var(--input);border:none;color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .modal-close:hover{background:var(--input-light);color:var(--text);}
+  .form-row{margin-bottom:16px;}
+  .form-row label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;}
+  .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-row-toggle{display:flex;align-items:center;justify-content:space-between;background:var(--input);border-radius:10px;padding:12px 16px;margin-bottom:16px;}
+  .form-row-toggle span{font-size:14px;}
+  .modal-footer{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);}
+  .modal-footer .btn{min-width:120px;}
+  .modal-note{font-size:12.5px;color:var(--muted-2);margin-top:-6px;margin-bottom:16px;line-height:1.5;}
+
+  .confirm-box{text-align:center;padding:34px 30px;}
+  .confirm-box p{font-size:16px;font-weight:600;margin:0 0 26px;line-height:1.5;}
+  .confirm-actions{display:flex;gap:12px;}
+  .confirm-actions .btn{flex:1;}
+
+  /* devices (УСТ) panel */
+  .device-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+  .device-row:last-of-type{border-bottom:none;}
+  .device-id{color:var(--muted-2);font-size:12px;margin-bottom:2px;}
+  .device-name{font-weight:600;font-size:14.5px;}
+  .device-edit-input{
+    flex:1;height:42px;background:var(--input-light);border:1px solid var(--border-strong);
+    border-radius:9px;padding:0 12px;color:var(--text);font-size:14px;margin-right:10px;
+  }
+  .device-add-row{display:flex;align-items:center;gap:10px;margin-top:14px;}
+  .check-btn{
+    width:42px;height:42px;border-radius:9px;background:var(--on);border:none;color:#fff;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .check-btn:hover{filter:brightness(1.08);}
+  .devices-empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 0;}
+
+  .storage-note{
+    display:flex;align-items:center;gap:10px;background:var(--input);border-radius:10px;
+    padding:12px 16px;font-size:13px;color:var(--muted);margin-top:2px;
+  }
+
+  @media (max-width:980px){
+    .sidebar{width:210px;padding:16px 10px;}
+    .nav-item span.label{font-size:14px;}
+    .content{padding:20px 16px 50px;}
+    .filter-grid,.filter-grid.cols-4,.form-grid-2{grid-template-columns:repeat(2,1fr);}
+    .ranges-head,.range-row{grid-template-columns:110px 70px 1fr 1fr;gap:10px;}
+    .modal-box{padding:22px 18px 24px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-loading">Загрузка...</div>
+
+<!-- ======================= LOGIN SCREEN ======================= -->
+<div id="login-screen">
+  <div class="login-header">
+    <div class="logo-badge"><span>SP</span></div>
+    <div class="right">
+      <button class="icon-btn theme-toggle-btn" type="button" title="Тема">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+      <button class="pill-btn" type="button" style="font-weight:700;">RU</button>
+    </div>
+  </div>
+
+  <div class="login-body">
+    <form class="login-card" id="login-form" novalidate>
+      <h1>Войти</h1>
+      <p class="sub">Пожалуйста, войдите в аккаунт, чтобы продолжить</p>
+
+      <div class="input-group">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg>
+        <input type="text" id="login-user" autocomplete="username" placeholder="" required>
+      </div>
+
+      <div class="input-group">
+        <svg class="ic" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 1 1 8 0v3"></path></svg>
+        <input type="password" id="login-pass" autocomplete="current-password" placeholder="пароль" required>
+      </div>
+
+      <button type="submit" id="login-submit">Войти</button>
+      <div id="login-error"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= MAIN APP ======================= -->
+<div id="app">
+  <div class="topbar">
+    <div class="logo-badge"><span>SP</span></div>
+    <div class="right">
+      <button class="icon-btn theme-toggle-btn" type="button" title="Тема">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+      <div class="toggle-group"><div class="toggle" data-toggle></div><span>Пр</span></div>
+      <div class="toggle-group"><div class="toggle" data-toggle></div><span>Вы</span></div>
+      <button class="logout-btn" id="logout-btn" type="button">
+        <svg class="ic" viewBox="0 0 24 24" style="width:17px;height:17px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+        Выйти
+      </button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- ---------- sidebar ---------- -->
+    <aside class="sidebar">
+      <nav>
+        <button class="nav-item active" data-page="home">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg></span>
+          <span class="label">Главная</span>
+        </button>
+        <button class="nav-item" data-page="deals">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path><path d="M3 21v-5h5"></path></svg></span>
+          <span class="label">Сделки</span>
+        </button>
+        <button class="nav-item" data-page="disputes">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3L2 20h20L12 3z"></path><path d="M12 10v4"></path><path d="M12 16.5v.01"></path></svg></span>
+          <span class="label">Споры</span>
+        </button>
+        <button class="nav-item" data-page="stats">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v9h9"></path></svg></span>
+          <span class="label">Статистика</span>
+        </button>
+        <button class="nav-item" data-page="req">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg></span>
+          <span class="label">Ре</span>
+        </button>
+        <button class="nav-item" data-page="staff">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg></span>
+          <span class="label">Сотрудники</span>
+        </button>
+        <button class="nav-item" data-page="settings">
+          <span class="ic-wrap"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"></path></svg></span>
+          <span class="label">Настройки</span>
+        </button>
+      </nav>
+
+      <div class="bot-card">
+        <div class="label">Бот уведомлений</div>
+        <button class="bot-connect" type="button">
+          <span class="tg"><svg viewBox="0 0 24 24"><path d="M22 2L2 10.5l6 2.5 2 7 3.5-4L18 20z"></path></svg></span>
+          Подключить
+        </button>
+      </div>
+    </aside>
+
+    <!-- ---------- content ---------- -->
+    <main class="content">
+      <div class="content-inner">
+
+        <!-- PAGE: Главная -->
+        <section class="page active" id="page-home">
+          <div class="card">
+            <div class="balance-top">
+              <div class="balance-left">
+                <div class="coin-icon-wrap">
+                  <div class="coin-icon">T</div>
+                  <div class="coin-badge"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M12 2L2 7v10l10 5 10-5V7z"></path></svg></div>
+                </div>
+                <div>
+                  <div class="balance-amount">6.73186300 USDT</div>
+                  <div class="balance-address">
+                    <span>TYVoBx...cyDfsV (USDT TRC20)</span>
+                    <button type="button" id="copy-addr" title="Скопировать">
+                      <svg class="ic" viewBox="0 0 24 24" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span class="copied-tip" id="copied-tip">Скопировано</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="balance-buttons">
+                <button class="btn">Вывести</button>
+                <button class="btn">История</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="limits-row">
+              <div class="limit-item">
+                <div class="limit-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"></path><path d="M9 12l2 2 4-4"></path></svg></div>
+                <div>
+                  <div class="limit-label">Страховой лимит:</div>
+                  <div class="limit-value">1.00 / 1.00 USDT</div>
+                </div>
+              </div>
+              <div class="limit-item">
+                <div class="limit-icon"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 1 1 8 0v3"></path></svg></div>
+                <div>
+                  <div class="limit-label">Заблокировано:</div>
+                  <div class="limit-value">0.00000000 USDT</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="reward-label">Торговое вознаграждение</div>
+            <div class="reward-row">
+              <div class="rl">Прием:</div>
+              <div class="pill-grid">
+                <div class="pill">1000-4999 : 16.0</div>
+                <div class="pill">5000-9999 : 13.0</div>
+                <div class="pill">9.0%</div>
+                <div class="pill">16.0</div>
+                <div class="pill">10+ : 9.0</div>
+              </div>
+            </div>
+            <div class="reward-row">
+              <div class="rl">Выплата:</div>
+              <div class="pill solo">0.0</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title danger">Активные споры</div>
+            <div class="empty-panel">Сделки не найдены</div>
+          </div>
+
+          <div class="card">
+            <div class="ranges-head">
+              <div>Сумма</div><div>Пополнение</div><div>С</div><div>на</div>
+            </div>
+            <div class="range-row"><div>0 - 500</div><div class="bar bar-green-full"></div><div class="bar bar-red-full"></div><div class="bar bar-red-full"></div></div>
+            <div class="range-row"><div>500 - 1 000</div><div class="bar bar-green-full"></div><div class="bar bar-red-full"></div><div class="bar bar-red-full"></div></div>
+            <div class="range-row"><div>1 000 - 1 500</div><div class="dot dot-green"></div><div class="dot dot-green"></div><div class="dot dot-green"></div></div>
+            <div class="range-row"><div>1 500 - 2 000</div><div class="dot dot-green"></div><div class="dot dot-green"></div><div class="dot dot-green"></div></div>
+            <div class="range-row"><div>2 000 - 2 500</div><div class="dot dot-green"></div><div class="dot dot-green"></div><div class="dot dot-green"></div></div>
+          </div>
+        </section>
+
+        <!-- PAGE: Сделки (нет скрина — простая заглушка в общем стиле) -->
+        <section class="page" id="page-deals">
+          <div class="card">
+            <div class="section-title plain">Сделки</div>
+            <div class="empty-panel">Сделки не найдены</div>
+          </div>
+        </section>
+
+        <!-- PAGE: Споры -->
+        <section class="page" id="page-disputes">
+          <div class="card">
+            <div class="section-title danger">Активные споры</div>
+            <div class="empty-panel">Сделки не найдены</div>
+          </div>
+          <div class="card">
+            <div class="section-title plain">Последние споры</div>
+            <div class="empty-panel">Сделки не найдены</div>
+          </div>
+        </section>
+
+        <!-- PAGE: Статистика -->
+        <section class="page" id="page-stats">
+          <div class="card">
+            <div class="filter-grid" style="margin-bottom:14px;">
+              <input class="field" type="text" value="2026-08-01 00:00:00">
+              <input class="field" type="text" placeholder="До даты">
+              <div class="field-wrap"><select class="field"><option>Способы</option></select><span class="chev">▾</span></div>
+            </div>
+            <div class="filter-grid">
+              <div class="field-wrap"><select class="field"><option>Тип оплаты</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Уст</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Ре</option></select><span class="chev">▾</span></div>
+            </div>
+            <div class="filter-actions">
+              <button class="btn">Применить</button>
+              <button class="btn btn-ghost">Сбросить</button>
+              <button class="btn">Экспорт Excel</button>
+            </div>
+          </div>
+
+          <div class="empty-stack">
+            <div class="simple-heading">Пр</div>
+          </div>
+          <div class="empty-stack">
+            <div class="simple-heading">Вы</div>
+          </div>
+        </section>
+
+        <!-- PAGE: Ре (Реквизиты) -->
+        <section class="page" id="page-req">
+          <div class="card">
+            <div class="filter-grid cols-4" style="margin-bottom:14px;">
+              <input class="field" type="text" placeholder="Ре">
+              <div class="field-wrap"><select class="field"><option>Ва</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Спо</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Тип</option></select><span class="chev">▾</span></div>
+            </div>
+            <div class="filter-grid cols-4">
+              <div class="field-wrap"><select class="field"><option>Статус</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Группа</option></select><span class="chev">▾</span></div>
+              <div class="field-wrap"><select class="field"><option>Уст</option></select><span class="chev">▾</span></div>
+              <div style="display:flex;gap:12px;">
+                <button class="btn" style="flex:1;">Применить</button>
+                <button class="btn btn-ghost" style="flex:1;">Сбросить</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar-row">
+            <div class="toolbar-left">
+              <button class="btn btn-ghost" id="open-devices-btn"><svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px;"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>Уст</button>
+              <button class="btn btn-ghost">Группы</button>
+              <button class="btn btn-ghost">Лимиты</button>
+            </div>
+            <button class="btn btn-primary" id="open-create-req-btn">Создать</button>
+          </div>
+
+          <div class="page-size-row">
+            <span>Показать</span>
+            <select class="field"><option>50</option><option>25</option><option>100</option></select>
+            <span>Записей</span>
+          </div>
+
+          <div class="card" style="padding:22px 24px;" id="storage-note-holder"></div>
+
+          <div class="card" style="padding:22px 24px;">
+            <div class="table-wrap">
+              <table class="req-table">
+                <thead>
+                  <tr>
+                    <th></th><th>Ре</th><th>Уст</th><th>Группа</th><th>Лимиты по сумме</th>
+                    <th>По объему</th><th>По кол-ву</th><th>Одноврем.</th><th>Статус</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="req-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE: Сотрудники (нет скрина — простая заглушка) -->
+        <section class="page" id="page-staff">
+          <div class="card">
+            <div class="section-title plain">Сотрудники</div>
+            <div class="empty-panel">Сотрудники не найдены</div>
+          </div>
+        </section>
+
+        <!-- PAGE: Настройки (нет скрина — простая заглушка) -->
+        <section class="page" id="page-settings">
+          <div class="card">
+            <div class="section-title plain" style="margin-bottom:18px;">Настройки</div>
+            <div class="reward-row">
+              <div class="rl" style="width:220px;">Уведомления на email</div>
+              <div class="toggle" data-toggle></div>
+            </div>
+            <div class="reward-row">
+              <div class="rl" style="width:220px;">Двухфакторная аутентификация</div>
+              <div class="toggle" data-toggle></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ======================= MODAL: создание/редактирование реквизита ======================= -->
+<div class="modal-overlay" id="req-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="req-modal-title">Создать реквизит</h2>
+      <button class="modal-close" data-close="req-modal-overlay">
+        <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="modal-note">Черновик полей — сверяю с твоим скриншотом создания, часть подписей может поменяться.</div>
+
+    <form id="req-form">
+      <div class="form-row">
+        <label>Название</label>
+        <input class="field" type="text" id="f-name" placeholder="Например: Сбербанк перевод" required>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Валюта</label>
+          <input class="field" type="text" id="f-currency" placeholder="RUB">
+        </div>
+        <div class="form-row">
+          <label>Способ оплаты</label>
+          <input class="field" type="text" id="f-method" placeholder="Перевод">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Тип</label>
+          <input class="field" type="text" id="f-type" placeholder="">
+        </div>
+        <div class="form-row">
+          <label>Группа</label>
+          <input class="field" type="text" id="f-group" placeholder="">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Устройство</label>
+        <div class="field-wrap">
+          <select class="field" id="f-device"><option value="">— без устройства —</option></select>
+          <span class="chev">▾</span>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Мин. сумма сделки</label>
+          <input class="field" type="number" id="f-tx-min" placeholder="0">
+        </div>
+        <div class="form-row">
+          <label>Макс. сумма сделки</label>
+          <input class="field" type="number" id="f-tx-max" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Дневной лимит объёма</label>
+          <input class="field" type="number" id="f-vol-day" placeholder="0">
+        </div>
+        <div class="form-row">
+          <label>Общий лимит объёма</label>
+          <input class="field" type="number" id="f-vol-total" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Дневной лимит количества</label>
+          <input class="field" type="number" id="f-cnt-day" placeholder="0">
+        </div>
+        <div class="form-row">
+          <label>Общий лимит количества</label>
+          <input class="field" type="number" id="f-cnt-total" placeholder="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Одновременных сделок</label>
+        <input class="field" type="number" id="f-concurrent" placeholder="0">
+      </div>
+
+      <div class="form-row-toggle">
+        <span>Статус (активен)</span>
+        <div class="toggle" data-toggle id="f-status"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="req-modal-overlay">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================= MODAL: панель УСТ (устройства) ======================= -->
+<div class="modal-overlay" id="devices-modal-overlay">
+  <div class="modal-box narrow">
+    <div class="modal-header">
+      <h2>УСТ</h2>
+      <button class="modal-close" data-close="devices-modal-overlay">
+        <svg class="ic" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div id="devices-list"></div>
+    <div class="device-add-row" id="device-add-row" style="display:none;">
+      <input class="device-edit-input" type="text" id="device-new-name" placeholder="Имя устройства">
+      <button class="check-btn" id="device-add-confirm" title="Сохранить">
+        <svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;"><path d="M20 6L9 17l-5-5"></path></svg>
+      </button>
+    </div>
+    <div class="modal-footer" style="justify-content:center;border-top:none;margin-top:16px;padding-top:0;">
+      <button type="button" class="btn btn-primary" id="device-add-btn" style="width:100%;">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= MODAL: подтверждение удаления ======================= -->
+<div class="modal-overlay" id="confirm-modal-overlay">
+  <div class="modal-box narrow confirm-box">
+    <p>Вы уверены, что хотите удалить запись?</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" id="confirm-cancel-btn">Отмена</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js';
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js';
+import {
+  getFirestore, doc, getDoc, setDoc
+} from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js';
+
+// Твой конфиг из Firebase Console. Analytics сюда не подключаю —
+// он не нужен для логина/регистрации и данных, а в некоторых
+// песочницах (например превью артефакта) может просто шуметь ошибками в консоль без пользы.
+const firebaseConfig = {
+  apiKey: "AIzaSyBXBhiepie8kjLF_I8xWsP4E-N3yCjWKlI",
+  authDomain: "souz-3f573.firebaseapp.com",
+  projectId: "souz-3f573",
+  storageBucket: "souz-3f573.firebasestorage.app",
+  messagingSenderId: "342414548891",
+  appId: "1:342414548891:web:ee42d7f3f683a945248b3e",
+  measurementId: "G-CSQV0PH5M8"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+var WALLET_ADDRESS = 'TYVoBxH3rM6m7uc1KaYwG8S328JDcyDfsV';
+var currentUser = null;
+
+  // ============================================================
+  // Firestore helpers — данные лежат в users/{uid}/data/{key},
+  // доступны только владельцу (см. правила безопасности в чате).
+  // ============================================================
+  async function storeGet(key, fallback){
+    try{
+      if(!currentUser) return fallback;
+      var ref = doc(db, 'users', currentUser.uid, 'data', key);
+      var snap = await getDoc(ref);
+      if(!snap.exists() || snap.data().value === undefined) return fallback;
+      return snap.data().value;
+    }catch(e){
+      console.error('firestore get failed:', key, e);
+      return fallback;
+    }
+  }
+  async function storeSet(key, value){
+    try{
+      if(!currentUser) return false;
+      var ref = doc(db, 'users', currentUser.uid, 'data', key);
+      await setDoc(ref, { value: value, updatedAt: Date.now() });
+      return true;
+    }catch(e){
+      console.error('firestore set failed:', key, e);
+      return false;
+    }
+  }
+  function uid(){ return Math.random().toString(36).slice(2,7); }
+
+  // ============================================================
+  // theme (тема на логин-экране не сохраняется — сохранять некуда,
+  // пока нет пользователя; после входа подтягивается/пишется в Firestore)
+  // ============================================================
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  }
+  async function toggleTheme(){
+    var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = cur === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    if(currentUser) await storeSet('theme', next);
+  }
+  document.querySelectorAll('.theme-toggle-btn').forEach(function(b){
+    b.addEventListener('click', toggleTheme);
+  });
+
+  // ============================================================
+  // login / logout
+  //
+  // Гейт для пользователя остаётся простым: логин+пароль сверяются
+  // локально со списком известных аккаунтов (сейчас только один — buj/buj).
+  // Но чтобы данные реально сохранялись через Firebase отдельно на каждый
+  // такой аккаунт (а не просто "в куче"), для каждого мок-аккаунта заведена
+  // своя внутренняя пара email/пароль в Firebase Auth — её пользователь
+  // никогда не вводит и не видит. При первом входе такой Firebase-аккаунт
+  // создаётся сам, при последующих — просто логинит. uid этого Firebase-
+  // аккаунта и есть тот самый "каждый аккаунт отдельно" для Firestore.
+  //
+  // Чтобы добавить второй реальный аккаунт позже — просто дописать сюда
+  // ещё одну запись с новым логином/паролем и своей внутренней парой.
+  // ============================================================
+  var ACCOUNTS = {
+    'buj': { pass: 'buj', fbEmail: 'buj@souz-3f573.internal', fbPass: 'buj-000000-souz' }
+  };
+
+  var bootLoading = document.getElementById('boot-loading');
+  var loginScreen = document.getElementById('login-screen');
+  var app = document.getElementById('app');
+  var form = document.getElementById('login-form');
+  var userInput = document.getElementById('login-user');
+  var passInput = document.getElementById('login-pass');
+  var errorEl = document.getElementById('login-error');
+  var card = document.querySelector('.login-card');
+  var submitBtn = document.getElementById('login-submit');
+
+  function shakeCard(){
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  }
+  function showError(msg){
+    errorEl.textContent = msg;
+    errorEl.style.display = 'block';
+    shakeCard();
+  }
+
+  function showApp(){
+    loginScreen.style.display = 'none';
+    app.style.display = 'flex';
+    initAppData();
+  }
+  function showLogin(){
+    app.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    passInput.value = '';
+    errorEl.style.display = 'none';
+    setActivePage('home');
+    dataLoaded = false;
+  }
+
+  async function signInAccount(acct){
+    try{
+      await signInWithEmailAndPassword(auth, acct.fbEmail, acct.fbPass);
+    }catch(err){
+      if(err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential'){
+        // первый вход под этим мок-аккаунтом — тихо заводим для него firebase-аккаунт
+        await createUserWithEmailAndPassword(auth, acct.fbEmail, acct.fbPass);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var login = userInput.value.trim();
+    var pass = passInput.value;
+    errorEl.style.display = 'none';
+
+    var acct = ACCOUNTS[login];
+    if(!acct || acct.pass !== pass){
+      showError('Неверный логин или пароль');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    try{
+      await signInAccount(acct);
+      // дальше onAuthStateChanged сам покажет приложение
+    }catch(err){
+      console.error('firebase auth failed:', err);
+      showError('Не получилось подключиться к серверу, попробуй ещё раз');
+    }finally{
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', function(){
+    signOut(auth);
+  });
+
+  onAuthStateChanged(auth, function(user){
+    bootLoading.style.display = 'none';
+    currentUser = user || null;
+    if(user){ showApp(); } else { showLogin(); }
+  });
+
+  // ============================================================
+  // sidebar navigation
+  // ============================================================
+  var navItems = document.querySelectorAll('.nav-item');
+  function setActivePage(pageId){
+    navItems.forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.page === pageId);
+    });
+    document.querySelectorAll('.page').forEach(function(pg){
+      pg.classList.toggle('active', pg.id === 'page-' + pageId);
+    });
+  }
+  navItems.forEach(function(btn){
+    btn.addEventListener('click', function(){ setActivePage(btn.dataset.page); });
+  });
+
+  // ============================================================
+  // generic toggles (Пр / Вы / настройки / статус в форме)
+  // ============================================================
+  function bindToggle(t){
+    t.addEventListener('click', function(){ t.classList.toggle('on'); });
+  }
+  document.querySelectorAll('[data-toggle]').forEach(bindToggle);
+
+  // ============================================================
+  // copy wallet address
+  // ============================================================
+  var copyBtn = document.getElementById('copy-addr');
+  if(copyBtn){
+    copyBtn.addEventListener('click', function(){
+      var tip = document.getElementById('copied-tip');
+      function flash(){ tip.classList.add('show'); setTimeout(function(){ tip.classList.remove('show'); }, 1200); }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(WALLET_ADDRESS).then(flash).catch(flash);
+      } else { flash(); }
+    });
+  }
+
+  // ============================================================
+  // generic modal open/close
+  // ============================================================
+  function openModal(id){
+    document.getElementById(id).classList.add('open');
+    document.body.classList.add('modal-open');
+  }
+  function closeModal(id){
+    document.getElementById(id).classList.remove('open');
+    if(!document.querySelector('.modal-overlay.open')) document.body.classList.remove('modal-open');
+  }
+  document.querySelectorAll('[data-close]').forEach(function(btn){
+    btn.addEventListener('click', function(){ closeModal(btn.dataset.close); });
+  });
+  document.querySelectorAll('.modal-overlay').forEach(function(ov){
+    ov.addEventListener('click', function(e){ if(e.target === ov) closeModal(ov.id); });
+  });
+
+  // confirm-delete dialog (reusable)
+  var confirmResolve = null;
+  function askConfirm(){
+    openModal('confirm-modal-overlay');
+    return new Promise(function(resolve){ confirmResolve = resolve; });
+  }
+  document.getElementById('confirm-ok-btn').addEventListener('click', function(){
+    closeModal('confirm-modal-overlay');
+    if(confirmResolve) confirmResolve(true);
+    confirmResolve = null;
+  });
+  document.getElementById('confirm-cancel-btn').addEventListener('click', function(){
+    closeModal('confirm-modal-overlay');
+    if(confirmResolve) confirmResolve(false);
+    confirmResolve = null;
+  });
+
+  // ============================================================
+  // app data: requisites + devices (loaded per account on login)
+  // ============================================================
+  var requisites = [];
+  var devices = [];
+  var editingReqId = null;
+  var dataLoaded = false;
+
+  var AVATAR_COLORS = ['#b23bc9','#e0b93a','#3ba0c9','#4caf6d','#e0703a','#8a6de0'];
+  function colorForId(id){
+    var sum = 0;
+    for(var i=0;i<id.length;i++) sum += id.charCodeAt(i);
+    return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+  }
+  // сайт использует пробел как разделитель тысяч и ТОЧКУ как десятичный разделитель
+  // (проверено по оригинальным скринам: "18 500.00", "0.00/60 000.00") — поэтому
+  // считаем вручную, а не через toLocaleString('ru-RU'), у которого запятая.
+  function groupThousands(intStr){
+    return intStr.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+  function fmtMoney(n){
+    n = Number(n)||0;
+    var fixed = n.toFixed(2);
+    var parts = fixed.split('.');
+    return groupThousands(parts[0]) + '.' + parts[1];
+  }
+  function fmtInt(n){
+    n = Math.round(Number(n)||0);
+    return groupThousands(String(n));
+  }
+
+  function seedRequisites(){
+    return [
+      {id:uid(), name:'Сбербанк перевод', currency:'RUB', method:'Перевод', type:'', group:'', deviceId:'',
+        txMin:1000, txMax:30000, volDay:60000, volTotal:1000000, cntDay:2, cntTotal:100, concurrent:1, status:false},
+      {id:uid(), name:'СБП пополнение', currency:'RUB', method:'СБП', type:'', group:'', deviceId:'',
+        txMin:500, txMax:15000, volDay:57900, volTotal:1000000, cntDay:10000, cntTotal:10000, concurrent:1, status:false}
+    ];
+  }
+
+  var chatIcon = '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.4 8.5 8.5 0 0 1-4-1L3 20l1.1-4.5A8.4 8.4 0 1 1 21 11.5z"></path></svg>';
+  var editIcon = '<svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+  var boxCrossIcon = '<svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M9 9l6 6M15 9l-6 6"></path></svg>';
+  var phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg>';
+
+  function deviceName(id){
+    var d = devices.find(function(x){ return x.id === id; });
+    return d ? d.name : '';
+  }
+
+  function renderRequisites(){
+    var tbody = document.getElementById('req-tbody');
+    if(!requisites.length){
+      tbody.innerHTML = '<tr class="table-empty-row"><td colspan="10">Реквизиты не найдены</td></tr>';
+      return;
+    }
+    tbody.innerHTML = requisites.map(function(r){
+      var initials = (r.name||'?').trim().slice(0,1).toUpperCase();
+      var devLabel = r.deviceId ? deviceName(r.deviceId) : '—';
+      var l2parts = [r.currency, r.method].filter(Boolean).join(' · ');
+      return '<tr data-id="'+r.id+'">'
+        + '<td><div class="avatar" style="background:'+colorForId(r.id)+'">'+initials+'</div></td>'
+        + '<td class="req-lines"><div class="l1">'+esc(r.name)+'</div><div class="l2">'+esc(l2parts||'—')+'</div></td>'
+        + '<td><div class="device-cell">'+(r.deviceId?phoneIcon:'')+'<span>'+esc(devLabel)+'</span></div></td>'
+        + '<td>'+(r.group ? esc(r.group) : '<span class="muted-dash">—</span>')+'</td>'
+        + '<td class="limit-lines"><div>т '+fmtMoney(r.txMin)+' '+esc(r.currency||'')+'</div><div>о '+fmtMoney(r.txMax)+' '+esc(r.currency||'')+'</div></td>'
+        + '<td class="stat-lines"><div class="stat-pill">0.00/'+fmtMoney(r.volDay)+'</div><div class="stat-pill">0.00/'+fmtMoney(r.volTotal)+'</div></td>'
+        + '<td class="stat-lines"><div class="stat-pill">0/'+fmtInt(r.cntDay)+'</div><div class="stat-pill">0/'+fmtInt(r.cntTotal)+'</div></td>'
+        + '<td>'+(r.concurrent ? r.concurrent : '<span class="muted-dash">—</span>')+'</td>'
+        + '<td><div class="toggle'+(r.status?' on':'')+'" data-row-toggle data-id="'+r.id+'"><span></span></div></td>'
+        + '<td><div class="row-actions">'
+          + '<button title="Чат" type="button">'+chatIcon+'</button>'
+          + '<button title="Изменить" type="button" data-edit="'+r.id+'">'+editIcon+'</button>'
+          + '<button title="Удалить" type="button" class="danger" data-delete="'+r.id+'">'+boxCrossIcon+'</button>'
+          + '</div></td>'
+        + '</tr>';
+    }).join('');
+
+    tbody.querySelectorAll('[data-row-toggle]').forEach(function(t){
+      t.addEventListener('click', async function(){
+        t.classList.toggle('on');
+        var id = t.dataset.id;
+        var rec = requisites.find(function(x){ return x.id === id; });
+        if(rec){ rec.status = t.classList.contains('on'); await storeSet('requisites', requisites); }
+      });
+    });
+    tbody.querySelectorAll('[data-edit]').forEach(function(b){
+      b.addEventListener('click', function(){ openReqModal(b.dataset.edit); });
+    });
+    tbody.querySelectorAll('[data-delete]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var ok = await askConfirm();
+        if(!ok) return;
+        requisites = requisites.filter(function(x){ return x.id !== b.dataset.delete; });
+        await storeSet('requisites', requisites);
+        renderRequisites();
+      });
+    });
+  }
+
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  // ---------- create / edit requisite modal ----------
+  var reqForm = document.getElementById('req-form');
+  var reqModalTitle = document.getElementById('req-modal-title');
+  var fDevice = document.getElementById('f-device');
+
+  function fillDeviceOptions(selectedId){
+    fDevice.innerHTML = '<option value="">— без устройства —</option>' +
+      devices.map(function(d){ return '<option value="'+d.id+'">'+esc(d.name)+'</option>'; }).join('');
+    fDevice.value = selectedId || '';
+  }
+
+  function openReqModal(id){
+    editingReqId = id || null;
+    var r = id ? requisites.find(function(x){ return x.id === id; }) : null;
+    reqModalTitle.textContent = r ? 'Редактировать реквизит' : 'Создать реквизит';
+    document.getElementById('f-name').value = r ? r.name : '';
+    document.getElementById('f-currency').value = r ? r.currency : 'RUB';
+    document.getElementById('f-method').value = r ? r.method : '';
+    document.getElementById('f-type').value = r ? r.type : '';
+    document.getElementById('f-group').value = r ? r.group : '';
+    fillDeviceOptions(r ? r.deviceId : '');
+    document.getElementById('f-tx-min').value = r ? r.txMin : '';
+    document.getElementById('f-tx-max').value = r ? r.txMax : '';
+    document.getElementById('f-vol-day').value = r ? r.volDay : '';
+    document.getElementById('f-vol-total').value = r ? r.volTotal : '';
+    document.getElementById('f-cnt-day').value = r ? r.cntDay : '';
+    document.getElementById('f-cnt-total').value = r ? r.cntTotal : '';
+    document.getElementById('f-concurrent').value = r ? r.concurrent : '';
+    var statusToggle = document.getElementById('f-status');
+    statusToggle.classList.toggle('on', r ? !!r.status : false);
+    openModal('req-modal-overlay');
+  }
+  document.getElementById('open-create-req-btn').addEventListener('click', function(){ openReqModal(null); });
+
+  reqForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    if(!name) return;
+    var data = {
+      name: name,
+      currency: document.getElementById('f-currency').value.trim(),
+      method: document.getElementById('f-method').value.trim(),
+      type: document.getElementById('f-type').value.trim(),
+      group: document.getElementById('f-group').value.trim(),
+      deviceId: fDevice.value,
+      txMin: Number(document.getElementById('f-tx-min').value)||0,
+      txMax: Number(document.getElementById('f-tx-max').value)||0,
+      volDay: Number(document.getElementById('f-vol-day').value)||0,
+      volTotal: Number(document.getElementById('f-vol-total').value)||0,
+      cntDay: Number(document.getElementById('f-cnt-day').value)||0,
+      cntTotal: Number(document.getElementById('f-cnt-total').value)||0,
+      concurrent: Number(document.getElementById('f-concurrent').value)||0,
+      status: document.getElementById('f-status').classList.contains('on')
+    };
+    if(editingReqId){
+      var idx = requisites.findIndex(function(x){ return x.id === editingReqId; });
+      if(idx > -1) requisites[idx] = Object.assign({id:editingReqId}, data);
+    } else {
+      data.id = uid();
+      requisites.push(data);
+    }
+    await storeSet('requisites', requisites);
+    renderRequisites();
+    closeModal('req-modal-overlay');
+  });
+
+  // ============================================================
+  // devices (УСТ) panel
+  // ============================================================
+  function renderDevices(){
+    var list = document.getElementById('devices-list');
+    if(!devices.length){
+      list.innerHTML = '<div class="devices-empty">Устройства не найдены</div>';
+      return;
+    }
+    list.innerHTML = devices.map(function(d){
+      return '<div class="device-row" data-id="'+d.id+'">'
+        + '<div><div class="device-id">ID: '+esc(d.id)+'</div><div class="device-name">'+esc(d.name)+'</div></div>'
+        + '<div class="row-actions">'
+          + '<button title="Изменить" type="button" data-device-edit="'+d.id+'">'+editIcon+'</button>'
+          + '<button title="Удалить" type="button" class="danger" data-device-delete="'+d.id+'">'+boxCrossIcon+'</button>'
+        + '</div></div>';
+    }).join('');
+
+    list.querySelectorAll('[data-device-edit]').forEach(function(b){
+      b.addEventListener('click', function(){ startDeviceInlineEdit(b.dataset.deviceEdit); });
+    });
+    list.querySelectorAll('[data-device-delete]').forEach(function(b){
+      b.addEventListener('click', async function(){
+        var ok = await askConfirm();
+        if(!ok) return;
+        devices = devices.filter(function(x){ return x.id !== b.dataset.deviceDelete; });
+        await storeSet('devices', devices);
+        renderDevices();
+      });
+    });
+  }
+
+  function startDeviceInlineEdit(id){
+    var row = document.querySelector('.device-row[data-id="'+id+'"]');
+    var d = devices.find(function(x){ return x.id === id; });
+    if(!row || !d) return;
+    row.innerHTML = '<input class="device-edit-input" type="text" value="'+esc(d.name)+'">'
+      + '<button class="check-btn" title="Сохранить"><svg class="ic" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;"><path d="M20 6L9 17l-5-5"></path></svg></button>';
+    var input = row.querySelector('input');
+    input.focus();
+    input.select();
+    var save = async function(){
+      var val = input.value.trim();
+      if(val){ d.name = val; await storeSet('devices', devices); }
+      renderDevices();
+    };
+    row.querySelector('.check-btn').addEventListener('click', save);
+    input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); save(); } });
+  }
+
+  var deviceAddRow = document.getElementById('device-add-row');
+  var deviceAddBtn = document.getElementById('device-add-btn');
+  var deviceNewName = document.getElementById('device-new-name');
+  deviceAddBtn.addEventListener('click', function(){
+    deviceAddRow.style.display = 'flex';
+    deviceAddBtn.style.display = 'none';
+    deviceNewName.value = '';
+    deviceNewName.focus();
+  });
+  async function confirmAddDevice(){
+    var name = deviceNewName.value.trim();
+    if(!name) return;
+    devices.push({id: uid(), name: name});
+    await storeSet('devices', devices);
+    deviceAddRow.style.display = 'none';
+    deviceAddBtn.style.display = 'inline-flex';
+    renderDevices();
+  }
+  document.getElementById('device-add-confirm').addEventListener('click', confirmAddDevice);
+  deviceNewName.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); confirmAddDevice(); } });
+
+  document.getElementById('open-devices-btn').addEventListener('click', function(){
+    deviceAddRow.style.display = 'none';
+    deviceAddBtn.style.display = 'inline-flex';
+    renderDevices();
+    openModal('devices-modal-overlay');
+  });
+
+  // ============================================================
+  // load data for the current account (once, after every login)
+  // ============================================================
+  async function initAppData(){
+    if(dataLoaded) return;
+    dataLoaded = true;
+
+    var holder = document.getElementById('storage-note-holder');
+    if(holder) holder.remove();
+
+    var savedTheme = await storeGet('theme', null);
+    if(savedTheme) applyTheme(savedTheme);
+
+    devices = await storeGet('devices', []);
+    var loadedReq = await storeGet('requisites', null);
+    if(loadedReq === null){
+      requisites = seedRequisites();
+      await storeSet('requisites', requisites);
+    } else {
+      requisites = loadedReq;
+    }
+    renderDevices();
+    renderRequisites();
+  }
+
+</script>
+</body>
+</html>
